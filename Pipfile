@@ -4,6 +4,7 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
+async-watchdog = {editable = true, path = "."}
 
 [dev-packages]
 pytest = "*"
@@ -11,7 +12,10 @@ twine = "*"
 setuptools = "*"
 wheel = "*"
 flake8 = "*"
+pytest-asyncio = "*"
+uvloop = "*"
+ruff = "*"
 
 [requires]
 python_version = "3.11"
-python_full_version = "3.11.11"
+python_full_version = "3.11.13"
