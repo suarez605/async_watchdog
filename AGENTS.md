@@ -19,66 +19,45 @@ This file is intended for agentic coding tools operating in this repository.
 ## Environment Setup
 
 ```bash
-# Install all dependencies (runtime + dev) into a pipenv virtualenv
-pipenv install --dev
-
-# Activate the virtualenv
-pipenv shell
-
-# Or run commands directly without activating
-pipenv run <command>
+pipenv install --dev   # install all deps into a virtualenv
+pipenv shell           # activate (optional)
+pipenv run <command>   # run without activating
 ```
 
-The package is installed in editable mode (`pip install -e .`) inside the pipenv
-virtualenv automatically (see `Pipfile`).
+The package is installed in editable mode (`pip install -e .`) automatically
+(see `Pipfile`).
 
 ---
 
 ## Build / Lint / Test Commands
 
 ```bash
-# Run all tests
-pipenv run pytest tests/
+# Tests
+pipenv run pytest tests/tests.py          # run all tests
+pipenv run pytest tests/tests.py -v       # verbose
+pipenv run pytest tests/tests.py::test_async_timeout_callback  # single test
 
-# Run a single test by name  ← most common during development
-pipenv run pytest tests/tests.py::test_async_timeout_callback
-
-# Run a single test file
-pipenv run pytest tests/tests.py
-
-# Verbose output
-pipenv run pytest tests/ -v
-
-# Print stdout inline (no capture)
-pipenv run pytest tests/ -s
-
-# Format code with ruff (always run before committing)
+# Lint & format (run both before every commit)
 pipenv run ruff format async_watchdog/ tests/
-
-# Check formatting without applying changes
-pipenv run ruff format --check async_watchdog/ tests/
-
-# Lint with ruff (mirrors flake8 E/W/F rules, 79-char limit)
-pipenv run ruff check async_watchdog/ tests/
-
-# Lint and auto-fix fixable issues
 pipenv run ruff check --fix async_watchdog/ tests/
 
-# Run linting with flake8 (legacy, kept for compatibility)
+# Check only (no changes)
+pipenv run ruff format --check async_watchdog/ tests/
+pipenv run ruff check async_watchdog/ tests/
+
+# Legacy linter (secondary, ruff takes precedence)
 pipenv run flake8 async_watchdog/ tests/
 
-# Build distribution packages
+# Build & publish
 pipenv run python setup.py sdist bdist_wheel
-
-# Upload to PyPI (requires credentials)
 pipenv run twine upload dist/*
 
-# Manual test execution with uvloop (for performance validation)
+# Manual uvloop smoke test
 pipenv run python tests/tests.py
 ```
 
-> **Note:** There is no `pytest.ini`, `setup.cfg`, or `pyproject.toml` configuring
-> pytest. All options must be passed on the command line.
+> **Note:** No `pytest.ini` / `setup.cfg` / `pyproject.toml` — pass all pytest
+> options on the command line.
 
 ---
 
@@ -94,8 +73,8 @@ async_watchdog/
 │   └── tests.py           # All tests (pytest + pytest-asyncio)
 ├── setup.py               # Package metadata and build config
 ├── ruff.toml              # Ruff formatter/linter config (79-char limit)
-├── Pipfile                # Dependency declarations
-├── Pipfile.lock           # Locked dependency versions
+├── Pipfile                # Dependency declarations (version-pinned ranges)
+├── Pipfile.lock           # Locked dependency versions (tracked in VCS)
 ├── skills-lock.json       # Installed agent skills
 └── AGENTS.md              # This file
 ```
@@ -126,13 +105,13 @@ from .logger import get_logger
 
 ### Naming Conventions
 
-| Construct            | Convention              | Example                        |
-|----------------------|-------------------------|--------------------------------|
-| Classes              | `PascalCase`            | `Watchdog`, `WatchdogFormatter`|
-| Functions / methods  | `snake_case`            | `get_logger`, `maybe_awaitable`|
-| Private attrs/methods| `_single_underscore`    | `_timeout`, `_run`, `_heartbeat`|
-| Test functions       | `test_<description>`    | `test_async_timeout_callback`  |
-| Constants            | `UPPER_SNAKE_CASE`      | *(none yet — follow convention)*|
+| Construct             | Convention           | Example                         |
+|-----------------------|----------------------|---------------------------------|
+| Classes               | `PascalCase`         | `Watchdog`, `WatchdogFormatter` |
+| Functions / methods   | `snake_case`         | `get_logger`, `maybe_awaitable` |
+| Private attrs/methods | `_single_underscore` | `_timeout`, `_run`, `_heartbeat`|
+| Test functions        | `test_<description>` | `test_async_timeout_callback`   |
+| Constants             | `UPPER_SNAKE_CASE`   | `_MIN_TIMEOUT`, `_MAX_TIMEOUT`  |
 
 ### Type Annotations
 - Annotate parameters where practical: `timeout: float`, `beat_interval: float`.
@@ -170,12 +149,12 @@ def __init__(self, timeout: float, on_timeout: callable = None, logger=None):
 await maybe_awaitable(self._on_timeout())
 ```
 
-- `stop()` is `async` and must be awaited. It cancels the internal task cleanly.
+- Both `start()` and `stop()` are **async** and must be awaited.
+- `start()` is idempotent and concurrency-safe — protected by an `asyncio.Lock`.
 - Always catch `asyncio.CancelledError` at the outermost level of long-running
   coroutines; handle with `pass` or cleanup logic, then let it propagate if needed.
 - Use `asyncio.Event` for signaling, `asyncio.wait_for()` for timeouts, and
   `create_task()` for background tasks.
-- `start()` is idempotent — multiple calls are safe (guards with `if self._task is None`).
 
 ---
 
@@ -196,6 +175,25 @@ await maybe_awaitable(self._on_timeout())
 - `WatchdogFormatter` automatically prepends `[Watchdog]` to every message.
 - `Watchdog.__init__` accepts an optional `logger` argument for injection in tests.
 - Default log level: `INFO`. Use `WARNING` for timeout events without a callback.
+- `logger.propagate = False` is set — messages do **not** bubble to the root logger.
+- Callback exception type is logged at `ERROR`; full details at `DEBUG` only.
+
+---
+
+## Security Constraints
+
+These invariants must be preserved in all future changes:
+
+- **`timeout` validation** — must be a finite float in `[0.001, 86400]` seconds.
+  `float('inf')`, `float('nan')`, zero, and negatives are rejected at construction.
+- **Log injection** — all exception messages written to logs must be passed through
+  `_sanitize_log_message()` (strips `\r`, `\n`, and other control characters).
+- **Concurrency** — `start()` and `stop()` are guarded by `asyncio.Lock`; do not
+  remove this guard or make either method synchronous.
+- **Blocking callbacks** — sync `on_timeout` callbacks must not perform blocking I/O
+  or `time.sleep`; document this constraint in any new callback-accepting API.
+- **Supply chain** — `Pipfile.lock` is tracked in VCS. Do not add it to `.gitignore`.
+  Dev dependencies use version ranges (e.g. `>=9.0,<10.0`), not wildcards (`*`).
 
 ---
 
@@ -218,7 +216,7 @@ await maybe_awaitable(self._on_timeout())
 
 ```python
 wd = Watchdog(timeout=0.1, on_timeout=on_timeout)
-wd.start()
+await wd.start()   # start() is async — always await it
 try:
     await simulate_healthy_process(wd, beat_interval=0.02, num_beats=5)
     await asyncio.sleep(timeout * 0.5)
@@ -251,9 +249,6 @@ wd = Watchdog(timeout=0.1, on_timeout=on_timeout)
 
 ## Available Agent Skills
 
-The following skills are installed and can be loaded by agentic tools operating in
-this repository (see `skills-lock.json`):
-
 | Skill                      | When to Use                                                  |
 |----------------------------|--------------------------------------------------------------|
 | `async-python-patterns`    | asyncio patterns, concurrency, semaphores, queues, perf tips |
@@ -265,8 +260,6 @@ features that fall within its domain.
 ---
 
 ## Agent Workflow for New Features
-
-When implementing a new feature in this repository, follow this standard flow:
 
 1. **explorer** — understand existing code, patterns, and constraints
 2. **proposer** — generate 2–3 implementation approaches with trade-offs
