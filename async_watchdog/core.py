@@ -1,11 +1,17 @@
 import asyncio
 import inspect
 import math
+import re
 from asyncio import Event, create_task, CancelledError
 from .logger import get_logger
 
 _MIN_TIMEOUT = 0.001  # 1 ms — minimum sensible timeout
 _MAX_TIMEOUT = 86400.0  # 24 h — maximum sensible timeout
+
+
+def _sanitize_log_message(msg: str) -> str:
+    """Remove control characters from log messages to prevent injection."""
+    return re.sub(r"[\r\n\t\x00-\x1f\x7f]", " ", str(msg))
 
 
 class Watchdog:
@@ -89,9 +95,15 @@ class Watchdog:
                                 f"and was cancelled."
                             )
                         except Exception as e:
+                            safe_type = _sanitize_log_message(type(e).__name__)
                             self._logger.error(
                                 f"Exception in timeout callback: "
-                                f"{type(e).__name__}: {e}"
+                                f"{safe_type}. See DEBUG for details."
+                            )
+                            self._logger.debug(
+                                f"Exception details: {safe_type}: "
+                                f"{_sanitize_log_message(str(e))}",
+                                exc_info=True,
                             )
                     else:
                         self._logger.warning(
