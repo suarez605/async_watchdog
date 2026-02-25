@@ -9,7 +9,7 @@ class WatchdogFormatter(logging.Formatter):
 
 def get_logger(name=__name__, level=logging.INFO):
     logger = logging.getLogger(name)
-    if not logger.hasHandlers():
+    if not logger.handlers:  # Check own handlers only, not inherited
         handler = logging.StreamHandler()
         formatter = WatchdogFormatter(
             "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
@@ -17,4 +17,5 @@ def get_logger(name=__name__, level=logging.INFO):
         handler.setFormatter(formatter)
         logger.addHandler(handler)
         logger.setLevel(level)
+        logger.propagate = False  # Prevent double-logging to root logger
     return logger
