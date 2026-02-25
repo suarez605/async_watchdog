@@ -29,6 +29,16 @@ class Watchdog:
             (bool not accepted).
         :param on_timeout: Optional callback (sync or async) called when
             the timeout is reached. Must be callable if provided.
+
+            .. warning::
+                Synchronous callbacks must not perform blocking operations
+                (e.g. ``time.sleep``, blocking I/O, heavy computation).
+                Blocking inside a sync callback will freeze the entire
+                asyncio event loop for the duration of the call.
+                Use an async callback with ``await asyncio.sleep()`` or
+                delegate blocking work to a thread via
+                ``asyncio.get_event_loop().run_in_executor()``.
+
         :param logger: Optional logger instance. Defaults to the package
             logger.
         :raises TypeError: If ``timeout`` is not an int or float (bool
