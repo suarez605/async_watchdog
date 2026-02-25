@@ -1,5 +1,6 @@
 import asyncio
 import inspect
+import math
 from asyncio import Event, create_task, CancelledError
 from .logger import get_logger
 
@@ -23,12 +24,17 @@ class Watchdog:
             logger.
         :raises TypeError: If ``timeout`` is not an int or float (bool
             excluded), or if ``on_timeout`` is not callable.
-        :raises ValueError: If ``timeout`` is not greater than zero.
+        :raises ValueError: If ``timeout`` is not greater than zero, or if
+            it is not a finite number (``inf`` and ``nan`` are rejected).
         """
         if isinstance(timeout, bool) or not isinstance(timeout, (int, float)):
             raise TypeError(
                 f"timeout must be a numeric value (int or float), "
                 f"got {type(timeout).__name__!r}"
+            )
+        if not math.isfinite(timeout):
+            raise ValueError(
+                f"timeout must be a finite number, got {timeout!r}"
             )
         if timeout <= 0:
             raise ValueError(
