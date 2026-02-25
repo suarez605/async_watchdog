@@ -9,8 +9,8 @@ This file is intended for agentic coding tools operating in this repository.
 
 - **Language:** Pure Python 3.11 (requires `>=3.10`)
 - **Package manager:** `pipenv` (see `Pipfile` / `Pipfile.lock`)
-- **Build system:** `setuptools` via `setup.py` (no `pyproject.toml`)
-- **No external runtime dependencies** (`install_requires=[]` in `setup.py`)
+- **Build system:** `setuptools` via `pyproject.toml` (PEP 517/518/621)
+- **No external runtime dependencies** (`dependencies = []` in `pyproject.toml`)
 - **Core concept:** `Watchdog` monitors heartbeats via `asyncio.Event`; triggers a
   callback (or logs a warning) when no heartbeat arrives within a timeout window.
 
@@ -49,15 +49,17 @@ pipenv run ruff check async_watchdog/ tests/
 pipenv run flake8 async_watchdog/ tests/
 
 # Build & publish
-pipenv run python setup.py sdist bdist_wheel
-pipenv run twine upload dist/*
+pipenv run python -c "import shutil; shutil.rmtree('dist', ignore_errors=True)"
+pipenv run python -m build          # generates dist/*.whl and dist/*.tar.gz
+pipenv run twine check dist/*       # validate before uploading
+pipenv run twine upload dist/*      # requires PyPI token
 
 # Manual uvloop smoke test
 pipenv run python tests/tests.py
 ```
 
-> **Note:** No `pytest.ini` / `setup.cfg` / `pyproject.toml` — pass all pytest
-> options on the command line.
+> **Note:** No `pytest.ini` / `setup.cfg` — pass all pytest options on the
+> command line. Build config lives in `pyproject.toml`.
 
 ---
 
@@ -71,7 +73,7 @@ async_watchdog/
 │   └── logger.py          # WatchdogFormatter + get_logger factory
 ├── tests/
 │   └── tests.py           # All tests (pytest + pytest-asyncio)
-├── setup.py               # Package metadata and build config
+├── pyproject.toml         # Package metadata and build config (PEP 517/621)
 ├── ruff.toml              # Ruff formatter/linter config (79-char limit)
 ├── Pipfile                # Dependency declarations (version-pinned ranges)
 ├── Pipfile.lock           # Locked dependency versions (tracked in VCS)
@@ -269,7 +271,8 @@ features that fall within its domain.
 6. **implementer** × N — implement one task at a time (invoke once per task)
 7. **test-writer** — write tests for the new code (load `python-testing-patterns`)
 8. **test-runner** — execute tests; if failures occur, return to **implementer**
-9. **reviewer** — final technical review before closing the feature
+9. **security-researcher** — security review of all new code before closing
+10. **reviewer** — final technical review before closing the feature
 
 > Never implement code directly in the orchestrator. Always delegate to **implementer**.
 > Pass full context (prior decisions, constraints, expected output) to every subagent.
