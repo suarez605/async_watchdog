@@ -7,6 +7,8 @@ from unittest.mock import MagicMock
 
 from async_watchdog.core import Watchdog
 
+_log = logging.getLogger(__name__)
+
 try:
     import uvloop
 
@@ -24,9 +26,9 @@ async def simulate_healthy_process(
         for i in range(num_beats):
             await asyncio.sleep(beat_interval)
             watchdog.beat()
-            print(f"Heartbeat {i + 1}/{num_beats} sent")
+            _log.debug("Heartbeat %d/%d sent", i + 1, num_beats)
     except asyncio.CancelledError:
-        print("Healthy process simulation cancelled")
+        _log.debug("Healthy process simulation cancelled")
         raise
 
 
@@ -38,16 +40,17 @@ async def simulate_failing_process(
         for i in range(fail_after):
             await asyncio.sleep(beat_interval)
             watchdog.beat()
-            print(f"Heartbeat {i + 1} sent")
+            _log.debug("Heartbeat %d sent", i + 1)
 
         # Simular fallo - dejar de enviar heartbeats
-        print(
-            f"Process failed after {fail_after} heartbeats, "
-            f"no more heartbeats will be sent"
+        _log.debug(
+            "Process failed after %d heartbeats, "
+            "no more heartbeats will be sent",
+            fail_after,
         )
         await asyncio.sleep(10)  # Dormir para simular hang
     except asyncio.CancelledError:
-        print("Failing process simulation cancelled")
+        _log.debug("Failing process simulation cancelled")
         raise
 
 
@@ -64,11 +67,11 @@ async def simulate_slow_start_process(
 
         for i in range(num_beats):
             watchdog.beat()
-            print(f"Heartbeat {i + 1}/{num_beats} sent")
+            _log.debug("Heartbeat %d/%d sent", i + 1, num_beats)
             if i < num_beats - 1:  # No dormir después del último
                 await asyncio.sleep(beat_interval)
     except asyncio.CancelledError:
-        print("Slow start process simulation cancelled")
+        _log.debug("Slow start process simulation cancelled")
         raise
 
 
@@ -312,7 +315,7 @@ async def test_concurrent_beats():
         for i in range(num_beats):
             await asyncio.sleep(0.01)
             wd.beat()
-            print(f"Beat {i + 1} from sender {beat_id}")
+            _log.debug("Beat %d from sender %d", i + 1, beat_id)
 
     try:
         await wd.start()
