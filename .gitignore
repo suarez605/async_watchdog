@@ -230,4 +230,7 @@ pyrightconfig.json
 
 # Custom rules (everything added below won't be overriden by 'Generate .gitignore File' if you use 'Update' option)
 
-Pipfile.lock
+# Pipfile.lock is intentionally tracked in version control to ensure
+# reproducible builds and protect against supply chain attacks.
+# See: https://pipenv.pypa.io/en/latest/pipfile-lock/
+# Pipfile.lock  ← do NOT re-add this line
