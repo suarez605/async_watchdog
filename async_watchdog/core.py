@@ -4,6 +4,9 @@ import math
 from asyncio import Event, create_task, CancelledError
 from .logger import get_logger
 
+_MIN_TIMEOUT = 0.001  # 1 ms — minimum sensible timeout
+_MAX_TIMEOUT = 86400.0  # 24 h — maximum sensible timeout
+
 
 class Watchdog:
     def __init__(
@@ -24,8 +27,9 @@ class Watchdog:
             logger.
         :raises TypeError: If ``timeout`` is not an int or float (bool
             excluded), or if ``on_timeout`` is not callable.
-        :raises ValueError: If ``timeout`` is not greater than zero, or if
-            it is not a finite number (``inf`` and ``nan`` are rejected).
+        :raises ValueError: If ``timeout`` is not in the range
+            [0.001, 86400] seconds, or if it is not a finite number
+            (``inf`` and ``nan`` are rejected).
         """
         if isinstance(timeout, bool) or not isinstance(timeout, (int, float)):
             raise TypeError(
@@ -36,9 +40,13 @@ class Watchdog:
             raise ValueError(
                 f"timeout must be a finite number, got {timeout!r}"
             )
-        if timeout <= 0:
+        if timeout < _MIN_TIMEOUT:
             raise ValueError(
-                f"timeout must be greater than zero, got {timeout!r}"
+                f"timeout must be >= {_MIN_TIMEOUT} seconds, got {timeout!r}"
+            )
+        if timeout > _MAX_TIMEOUT:
+            raise ValueError(
+                f"timeout must be <= {_MAX_TIMEOUT} seconds, got {timeout!r}"
             )
         if on_timeout is not None and not callable(on_timeout):
             raise TypeError(

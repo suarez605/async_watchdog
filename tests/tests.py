@@ -431,13 +431,13 @@ async def test_callback_exception_is_logged():
 
 def test_timeout_negative_raises_value_error():
     """Test: timeout negativo debe lanzar ValueError"""
-    with pytest.raises(ValueError, match="greater than zero"):
+    with pytest.raises(ValueError, match="timeout must be >="):
         Watchdog(timeout=-1.0)
 
 
 def test_timeout_zero_raises_value_error():
     """Test: timeout cero debe lanzar ValueError"""
-    with pytest.raises(ValueError, match="greater than zero"):
+    with pytest.raises(ValueError, match="timeout must be >="):
         Watchdog(timeout=0)
 
 
