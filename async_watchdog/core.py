@@ -15,6 +15,15 @@ def _sanitize_log_message(msg: str) -> str:
 
 
 class Watchdog:
+    __slots__ = (
+        "_timeout",
+        "_on_timeout",
+        "_heartbeat",
+        "_task",
+        "_lock",
+        "_logger",
+    )
+
     def __init__(
         self,
         timeout: float,
