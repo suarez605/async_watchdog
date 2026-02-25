@@ -1,10 +1,19 @@
 import asyncio
 import logging
-import pytest
-import uvloop
-from async_watchdog.core import Watchdog
-from unittest.mock import MagicMock
 import time
+
+import pytest
+from unittest.mock import MagicMock
+
+from async_watchdog.core import Watchdog
+
+try:
+    import uvloop
+
+    HAS_UVLOOP = True
+except ImportError:
+    uvloop = None  # type: ignore[assignment]
+    HAS_UVLOOP = False
 
 
 async def simulate_healthy_process(
@@ -530,11 +539,13 @@ async def test_hanging_async_callback_timeout_is_logged():
 # Función utilitaria para ejecutar tests con uvloop
 def run_test_with_uvloop(test_func):
     """Ejecutar un test específico con uvloop"""
+    if not HAS_UVLOOP:
+        raise RuntimeError("uvloop is not installed; cannot run uvloop tests.")
 
     async def wrapper():
         await test_func()
 
-    uvloop.run(wrapper())
+    uvloop.run(wrapper())  # type: ignore[union-attr]
 
 
 # Tests que se pueden ejecutar manualmente con uvloop
