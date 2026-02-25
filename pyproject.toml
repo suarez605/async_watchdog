@@ -1,0 +1,42 @@
+[build-system]
+requires = ["setuptools>=82.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "async-watchdog"
+version = "0.0.1"
+description = "Fast and simple async watchdog to monitor heartbeats in asyncio applications."
+readme = "README.md"
+license = { text = "MIT" }
+authors = [
+    { name = "Álvaro Suárez Lozano", email = "alvaro@example.com" }
+]
+requires-python = ">=3.10"
+dependencies = []
+keywords = ["asyncio", "watchdog", "heartbeat", "monitoring", "async"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3 :: Only",
+    "Framework :: AsyncIO",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: System :: Monitoring",
+    "Typing :: Typed",
+]
+
+[project.urls]
+Homepage = "https://github.com/suarez605/async_watchdog"
+Repository = "https://github.com/suarez605/async_watchdog"
+"Bug Tracker" = "https://github.com/suarez605/async_watchdog/issues"
+Security = "https://github.com/suarez605/async_watchdog/security/advisories"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["async_watchdog*"]
+exclude = ["tests*", "build*", "dist*"]
