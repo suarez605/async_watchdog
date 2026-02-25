@@ -75,7 +75,7 @@ async def test_healthy_process_no_timeout():
     wd = Watchdog(timeout=timeout, on_timeout=on_timeout)
 
     try:
-        wd.start()
+        await wd.start()
 
         # Ejecutar proceso saludable
         await simulate_healthy_process(wd, beat_interval, num_beats)
@@ -102,7 +102,7 @@ async def test_failing_process_triggers_timeout():
     wd = Watchdog(timeout=timeout, on_timeout=on_timeout)
 
     try:
-        wd.start()
+        await wd.start()
 
         # Crear tarea que falla
         failing_task = asyncio.create_task(
@@ -138,7 +138,7 @@ async def test_watchdog_waits_for_first_heartbeat():
     wd = Watchdog(timeout=timeout, on_timeout=on_timeout)
 
     try:
-        wd.start()
+        await wd.start()
 
         # Proceso que tarda un poco en empezar pero luego es regular
         await simulate_slow_start_process(wd, initial_delay, beat_interval, 5)
@@ -163,7 +163,7 @@ async def test_watchdog_stops_cleanly():
     wd = Watchdog(timeout=timeout, on_timeout=on_timeout)
 
     try:
-        wd.start()
+        await wd.start()
 
         # Enviar primer heartbeat para que empiece el monitoreo
         wd.beat()
@@ -197,7 +197,7 @@ async def test_async_timeout_callback():
     wd = Watchdog(timeout=timeout, on_timeout=async_timeout_handler)
 
     try:
-        wd.start()
+        await wd.start()
 
         # Enviar primer heartbeat y luego parar
         wd.beat()
@@ -226,7 +226,7 @@ async def test_sync_timeout_callback():
     wd = Watchdog(timeout=timeout, on_timeout=sync_timeout_handler)
 
     try:
-        wd.start()
+        await wd.start()
 
         # Enviar primer heartbeat y luego parar
         wd.beat()
@@ -253,11 +253,11 @@ async def test_multiple_start_calls_safe():
 
     try:
         # Múltiples start() no deben crear múltiples tareas
-        wd.start()
+        await wd.start()
         first_task = wd._task
 
-        wd.start()  # Segunda llamada
-        wd.start()  # Tercera llamada
+        await wd.start()  # Segunda llamada
+        await wd.start()  # Tercera llamada
 
         # Debe ser la misma tarea
         assert wd._task is first_task
@@ -283,7 +283,7 @@ async def test_stop_before_start():
     await wd.stop()
 
     # Después debería poder start() normalmente
-    wd.start()
+    await wd.start()
     wd.beat()
     await asyncio.sleep(0.01)
 
@@ -306,7 +306,7 @@ async def test_concurrent_beats():
             print(f"Beat {i + 1} from sender {beat_id}")
 
     try:
-        wd.start()
+        await wd.start()
 
         # Múltiples "procesos" enviando beats concurrentemente
         tasks = [
@@ -340,7 +340,7 @@ async def test_sync_callback_exception_does_not_kill_watchdog():
     wd = Watchdog(timeout=timeout, on_timeout=failing_sync_callback)
 
     try:
-        wd.start()
+        await wd.start()
 
         # Enviar primer heartbeat
         wd.beat()
@@ -371,7 +371,7 @@ async def test_async_callback_exception_does_not_kill_watchdog():
     wd = Watchdog(timeout=timeout, on_timeout=failing_async_callback)
 
     try:
-        wd.start()
+        await wd.start()
 
         # Enviar primer heartbeat
         wd.beat()
@@ -403,7 +403,7 @@ async def test_callback_exception_is_logged():
     )
 
     try:
-        wd.start()
+        await wd.start()
 
         # Enviar primer heartbeat
         wd.beat()
@@ -472,7 +472,7 @@ async def test_hanging_async_callback_is_interrupted():
     wd = Watchdog(timeout=timeout, on_timeout=hanging_callback)
 
     try:
-        wd.start()
+        await wd.start()
 
         # Enviar primer heartbeat
         wd.beat()
@@ -506,7 +506,7 @@ async def test_hanging_async_callback_timeout_is_logged():
     )
 
     try:
-        wd.start()
+        await wd.start()
 
         # Enviar primer heartbeat
         wd.beat()

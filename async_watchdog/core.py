@@ -30,6 +30,8 @@ class Watchdog:
         :raises ValueError: If ``timeout`` is not in the range
             [0.001, 86400] seconds, or if it is not a finite number
             (``inf`` and ``nan`` are rejected).
+        :note: ``start()`` is async and must be awaited.
+            ``stop()`` is also async and must be awaited.
         """
         if isinstance(timeout, bool) or not isinstance(timeout, (int, float)):
             raise TypeError(
@@ -57,6 +59,7 @@ class Watchdog:
         self._on_timeout = on_timeout
         self._heartbeat = Event()
         self._task = None
+        self._lock = asyncio.Lock()
         self._logger = logger if logger else get_logger(__name__)
 
     def beat(self):
@@ -98,18 +101,37 @@ class Watchdog:
         except CancelledError:
             pass
 
-    def start(self):
-        if self._task is None:
-            self._task = create_task(self._run())
+    async def start(self):
+        """
+        Start the watchdog background task.
+
+        This method is idempotent: calling it multiple times is safe.
+        It is async to guarantee atomicity when called concurrently
+        from multiple coroutines.
+
+        .. warning::
+            Do not call ``start()`` from synchronous code after the
+            event loop is running. Schedule it with
+            ``asyncio.ensure_future(wd.start())`` if needed.
+        """
+        async with self._lock:
+            if self._task is None:
+                self._task = create_task(self._run())
 
     async def stop(self):
-        if self._task:
-            self._task.cancel()
-            try:
-                await self._task
-            except CancelledError:
-                pass
-            self._task = None
+        """
+        Stop the watchdog and cancel the background task.
+
+        Safe to call even if the watchdog was never started.
+        """
+        async with self._lock:
+            if self._task:
+                self._task.cancel()
+                try:
+                    await self._task
+                except CancelledError:
+                    pass
+                self._task = None
 
 
 async def maybe_awaitable(result):
