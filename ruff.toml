@@ -2,7 +2,7 @@
 # Replaces manual line-length checks; compatible with flake8 E/W/F rules.
 
 line-length = 79
-target-version = "py311"
+target-version = "py310"
 
 [lint]
 # Mirror the flake8 rule set used previously
